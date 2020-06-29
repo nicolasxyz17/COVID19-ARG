@@ -1,29 +1,13 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 # ### Covid-19 en Argentina
-
-# In[1]:
-
-
 import pandas as pd
 
 url = 'https://sisa.msal.gov.ar/datos/descargas/covid-19/files/Covid19Casos.csv'
 dataCovid = pd.read_csv(url, encoding = "UTF-16-LE")
-
 #Exploración de los datos
 print(dataCovid.columns)
-
-
-# In[2]:
-
-
+###############################################################################
 dataCovid.head(3)
-
-
-# In[3]:
-
-
+###############################################################################
 #Transformar object type a datetime type
 idx = pd.to_datetime(dataCovid.fecha_apertura, format='%Y/%m/%d')
 #Defino un índice como 
@@ -31,12 +15,9 @@ dataCovid = dataCovid.set_index(idx)
 #Eliminar la columna 
 data = dataCovid.drop('fecha_apertura',axis=1)
 data.head()
-
+################################################################################
 
 # #### CASOS CONFIRMADOS POSITIVOS Y ACUMULADOS
-
-# In[4]:
-
 
 covid_positivo = dataCovid.loc[dataCovid.clasificacion_resumen=='Confirmado']
 covid_positivo['fecha'] = pd.to_datetime(covid_positivo.fecha_apertura, format='%Y/%m/%d')
@@ -47,10 +28,7 @@ casos['daily_cases'] = covid_positivo.clasificacion_resumen.groupby(covid_positi
 casos['daily_cum_cases'] = casos['daily_cases'].cumsum()
 df_casos = pd.DataFrame(casos)
 df_casos
-
-
-# In[5]:
-
+####################################################################################
 
 import matplotlib.pyplot as plt
 
@@ -74,12 +52,9 @@ with plt.style.context('dark_background'):
         xytext=(d, df_casos.daily_cum_cases[d]*1.5), color='white',
         arrowprops=dict(headwidth=10, headlength=10, width=1, facecolor='white', shrink=0.05),
         horizontalalignment='center', verticalalignment='top')
-
+#######################################################################################
 
 # #### Descomposición de la curva por Sexo
-
-# In[6]:
-
 
 M = covid_positivo.loc[(covid_positivo.edad_años_meses=='Años') & (covid_positivo.sexo=='M')]
 M = pd.concat([M.sexo, M.edad], axis=1).dropna().sort_values('edad',ascending=True)
@@ -100,12 +75,10 @@ with plt.style.context('dark_background'):
     plt.title('Discriminación por sexo')
     plt.legend(labels=['M', 'F'])
     plt.show()
-
+    
+#################################################################################
 
 # #### Edad de los Grupos Contagiados
-
-# In[7]:
-
 
 M = covid_positivo.loc[(covid_positivo.edad_años_meses=='Años') & (covid_positivo.sexo=='M')]
 M = pd.concat([M.sexo, M.edad], axis=1).dropna().sort_values('edad',ascending=True)
@@ -128,16 +101,9 @@ with plt.style.context('dark_background'):
     plt.show()
 
 
-# In[ ]:
-
-
-
-
+##########################################################################################
 
 # #### TASA DE CRECIMEINTO EN CONTAGIOS
-
-# In[8]:
-
 
 g = (df_casos.daily_cum_cases.pct_change()*100).to_frame()
 
@@ -152,22 +118,15 @@ with plt.style.context('dark_background'):
     ax.legend(['% Contagios','Mediana'])
 
 
-# In[9]:
+####################################################################################
 
 
 data.cuidado_intensivo.value_counts()
 
-
-# In[10]:
-
-
 data.clasificacion_resumen.value_counts()
 
-
+######################################################################################
 # #### CASOS POSITIVOS CON/SIN ASISTENCIA RESPIRATORIA POR PROVINCIAS
-
-# In[11]:
-
 
 provincia = str('Buenos Aires')
 asistencia = str('NO')
@@ -186,11 +145,8 @@ with plt.style.context('dark_background'):
     plt.title(f'Contagios Diarios Confirmados en {provincia}')
 plt.show()
 
-
+#######################################################################################
 # #### Promedio de pacientes contagiados con/sin asistencia respiratoria
-
-# In[12]:
-
 
 provincia = str('Buenos Aires')
 asistencia = str('NO')
@@ -203,8 +159,7 @@ covid_positivo_asis = pd.DataFrame(covid_positivo_asis)
 print(f'En {provincia} el promedio Diario de pacientes que {asistencia} necesitan Asistencia Respiratoria es: {covid_positivo_asis.mean()[0]:.4}')
 
 
-# In[15]:
-
+######################################################################################################
 
 #Discriminación por ubicación y sexo
 provincia = str('CABA')
@@ -227,11 +182,8 @@ with plt.style.context('dark_background'):
     plt.title(f'Pacientes Sexo = {sexo} | Contagios Confirmados en {provincia}')
 plt.show()
 
-
+#########################################################################################################
 # #### Segmentación por Grupo
-
-# In[29]:
-
 
 df['total'] = df.M + df.F
 df.loc[(df.index>=1) & (df.index <= 8),  'Grupo'] = 'Niño'
@@ -245,28 +197,8 @@ grupo['%'] = round(grupo.total / df.total.sum() * 100, 2)
 grupo.sort_values('%',ascending=False)
 
 
-# In[30]:
-
-
 plt.title('Contagios en %')
 plt.pie(grupo['%'], labels=grupo.index,autopct='%1.1f%%')
 plt.show()
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
 
 

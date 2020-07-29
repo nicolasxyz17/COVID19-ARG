@@ -1,41 +1,41 @@
 # ### Covid-19 en Argentina
+
 import pandas as pd
 
 url = 'https://sisa.msal.gov.ar/datos/descargas/covid-19/files/Covid19Casos.csv'
 dataCovid = pd.read_csv(url, encoding = "UTF-16-LE")
+
 #Exploración de los datos
 print(dataCovid.columns)
-###############################################################################
+
+
 dataCovid.head(3)
-###############################################################################
-#Transformar object type a datetime type
+
+
+#Indice datetime type
 idx = pd.to_datetime(dataCovid.fecha_apertura, format='%Y/%m/%d')
-#Defino un índice como 
+#Reemplazar índice
 dataCovid = dataCovid.set_index(idx)
 #Eliminar la columna 
 data = dataCovid.drop('fecha_apertura',axis=1)
 data.head()
-################################################################################
 
-# #### CASOS CONFIRMADOS POSITIVOS Y ACUMULADOS
+positivo = dataCovid.loc[dataCovid.clasificacion_resumen=='Confirmado']
+negativo = dataCovid.loc[dataCovid.clasificacion_resumen=='Descartado']
 
-covid_positivo = dataCovid.loc[dataCovid.clasificacion_resumen=='Confirmado']
-covid_positivo['fecha'] = pd.to_datetime(covid_positivo.fecha_apertura, format='%Y/%m/%d')
-covid_positivo = covid_positivo.set_index('fecha')
-
-casos = {}
-casos['daily_cases'] = covid_positivo.clasificacion_resumen.groupby(covid_positivo.index).count()
-casos['daily_cum_cases'] = casos['daily_cases'].cumsum()
-df_casos = pd.DataFrame(casos)
-df_casos
-####################################################################################
+#Positivos
+casoP = {}
+casoP['daily_cases'] = positivo.clasificacion_resumen.groupby(positivo.index).count()
+casoP['daily_cum_cases'] = casoP['daily_cases'].cumsum()
+casoP = pd.DataFrame(casoP)
+casoP.tail()
 
 import matplotlib.pyplot as plt
 
 with plt.style.context('dark_background'):
     fig, ax = plt.subplots(figsize=(20,10))
 
-    ax.plot(df_casos.daily_cum_cases)
+    ax.plot(casoP.daily_cum_cases)
     ax.set_xlabel('')
     ax.set_ylabel('Casos (+) Confirmados')
     ax.set_title("ACUM. DIARIA COVID19 EN ARG.")
@@ -45,55 +45,53 @@ with plt.style.context('dark_background'):
                (pd.Timestamp("2020-04-14"), 'Fase III'),
                (pd.Timestamp("2020-05-11"), 'Fase IV'),
                (pd.Timestamp("2020-05-25"), 'Fase V'),
-               (pd.Timestamp("2020-06-08"), 'Fase V')]
+               (pd.Timestamp("2020-06-08"), 'Fase VI'),
+               (pd.Timestamp("2020-07-01"), 'Fase VII')]
 
     for d, l in eventos:
-        ax.annotate(l, xy=(d, df_casos.daily_cum_cases[d]), 
-        xytext=(d, df_casos.daily_cum_cases[d]*1.5), color='white',
+        ax.annotate(l, xy=(d, casoP.daily_cum_cases[d]), 
+        xytext=(d, casoP.daily_cum_cases[d]*1.1), color='white',
         arrowprops=dict(headwidth=10, headlength=10, width=1, facecolor='white', shrink=0.05),
         horizontalalignment='center', verticalalignment='top')
-#######################################################################################
 
-# #### Descomposición de la curva por Sexo
 
-M = covid_positivo.loc[(covid_positivo.edad_años_meses=='Años') & (covid_positivo.sexo=='M')]
+#Descomposición de la curva por Sexo
+M = positivo.loc[(positivo.edad_años_meses=='Años') & (positivo.sexo=='M')]
 M = pd.concat([M.sexo, M.edad], axis=1).dropna().sort_values('edad',ascending=True)
 M = M.sexo.groupby(M.index).count().cumsum()
 
 
-F = covid_positivo.loc[(covid_positivo.edad_años_meses=='Años') & (covid_positivo.sexo=='F')]
+F = positivo.loc[(positivo.edad_años_meses=='Años') & (positivo.sexo=='F')]
 F = pd.concat([F.sexo, F.edad], axis=1).dropna().sort_values('edad',ascending=True)
 F = F.sexo.groupby(F.index).count().cumsum()
 
-df = pd.concat([M,F], axis=1).fillna(0)
-
+sexo_edad = pd.concat([M,F], axis=1).fillna(0)
+sexo_edad.columns = ['M', 'F']
 with plt.style.context('dark_background'):
     plt.rcParams['figure.figsize'] = [20, 5]
-    df.plot.bar(stacked=True)
+    sexo_edad.plot.bar(stacked=True)
     plt.xlabel('')
     plt.ylabel('')
     plt.title('Discriminación por sexo')
     plt.legend(labels=['M', 'F'])
     plt.show()
-    
-#################################################################################
 
-# #### Edad de los Grupos Contagiados
 
-M = covid_positivo.loc[(covid_positivo.edad_años_meses=='Años') & (covid_positivo.sexo=='M')]
+#Edad de los Grupos Contagiados
+M = positivo.loc[(positivo.edad_años_meses=='Años') & (positivo.sexo=='M')]
 M = pd.concat([M.sexo, M.edad], axis=1).dropna().sort_values('edad',ascending=True)
 M = M.sexo.groupby(M.edad).count()
 
 
-F = covid_positivo.loc[(covid_positivo.edad_años_meses=='Años') & (covid_positivo.sexo=='F')]
+F = positivo.loc[(positivo.edad_años_meses=='Años') & (positivo.sexo=='F')]
 F = pd.concat([F.sexo, F.edad], axis=1).dropna().sort_values('edad',ascending=True)
 F = F.sexo.groupby(F.edad).count()
 
-df = pd.concat([M,F], axis=1).fillna(0)
-df.columns = ['M', 'F']
+edad = pd.concat([M,F], axis=1).fillna(0)
+edad.columns = ['M', 'F']
 with plt.style.context('dark_background'):
     plt.rcParams['figure.figsize'] = [20, 5]
-    df.plot.bar(stacked=True)
+    edad.plot.bar(stacked=True)
     plt.xlabel('')
     plt.ylabel('')
     plt.title('Distribución Grupos de Contagio')
@@ -101,65 +99,81 @@ with plt.style.context('dark_background'):
     plt.show()
 
 
-##########################################################################################
+caba = positivo.loc[(positivo.carga_provincia_nombre=='CABA')]
+caba.clasificacion_resumen.groupby(caba.index).count()
 
-# #### TASA DE CRECIMEINTO EN CONTAGIOS
+#Curva CABA vs PBA
+caba = positivo.loc[(positivo.carga_provincia_nombre=='CABA')]
+pba = positivo.loc[(positivo.carga_provincia_nombre=='Buenos Aires')]
 
-g = (df_casos.daily_cum_cases.pct_change()*100).to_frame()
+casos = {}
+casos['caba'] = caba.clasificacion_resumen.groupby(caba.index).count()#.cumsum()
+casos['pba'] = pba.clasificacion_resumen.groupby(pba.index).count()#.cumsum()
+casos['suma'] = casos['caba'] + casos['pba']
+casos = pd.DataFrame(casos)
+
+
+with plt.style.context('dark_background'):
+    fig, ax = plt.subplots(figsize=(20,10))
+    ax.plot(casos.caba, c="w",ls='-',lw=1 ,label='CABA')
+    ax.plot(casos.pba, c="w",ls="solid",lw=0.5,label='PBA')
+    ax.plot(casos.suma, c="r",ls="solid",lw=1.5,label='Total')
+    ax.plot(casos.index, [casos.suma.median()]*len(casos),ls="-.",lw=0.4,label="Median")
+    ax.legend()
+    ax.set_xlabel('')
+    ax.set_ylabel('Casos (+) Confirmados')
+    ax.set_title("CABA vs PBA")
+
+
+#Tasa de crecimiento de contagios
+g = (casos.suma.cumsum().pct_change()*100).to_frame()
 
 with plt.style.context('dark_background'):
     fig, ax = plt.subplots(figsize=(20,5))
 
-    ax.plot(g)
-    ax.axhline(g.daily_cum_cases.median())
+    ax.plot(g['2020-04':],c="w")
+    ax.axhline(g.suma.median(),lw=1)
     ax.set_xlabel('')
     ax.set_ylabel('Tasa %')
     ax.set_title("Tasa de Contagios")
     ax.legend(['% Contagios','Mediana'])
 
 
-####################################################################################
-
-
 data.cuidado_intensivo.value_counts()
 
 data.clasificacion_resumen.value_counts()
 
-######################################################################################
-# #### CASOS POSITIVOS CON/SIN ASISTENCIA RESPIRATORIA POR PROVINCIAS
 
+#CASOS POSITIVOS CON/SIN ASISTENCIA RESPIRATORIA POR PROVINCIAS
 provincia = str('Buenos Aires')
 asistencia = str('NO')
 
-covid_positivo_prov = covid_positivo.loc[covid_positivo.residencia_provincia_nombre==provincia]
-covid_positivo_asis = covid_positivo_prov.loc[covid_positivo_prov.asistencia_respiratoria_mecanica==asistencia]
-covid_positivo_asis = covid_positivo_asis.clasificacion_resumen.groupby(covid_positivo_asis.index).count()
-covid_positivo_asis = pd.DataFrame(covid_positivo_asis)
+positivo_prov = positivo.loc[positivo.residencia_provincia_nombre==provincia]
+positivo_asis = positivo_prov.loc[positivo_prov.asistencia_respiratoria_mecanica==asistencia]
+positivo_asis = positivo_asis.clasificacion_resumen.groupby(positivo_asis.index).count()
+positivo_asis = pd.DataFrame(positivo_asis)
 
 with plt.style.context('dark_background'):
     plt.rcParams['figure.figsize'] = [20, 5]
-    covid_positivo_asis.plot(kind='line',color='white')
+    positivo_asis.plot(kind='line',color='white')
     plt.legend('')
     plt.xlabel('')
     plt.ylabel(f'Pacientes con Asist. Resp. = :{asistencia}')
     plt.title(f'Contagios Diarios Confirmados en {provincia}')
 plt.show()
 
-#######################################################################################
-# #### Promedio de pacientes contagiados con/sin asistencia respiratoria
 
+#Promedio de pacientes contagiados con/sin asistencia respiratoria
 provincia = str('Buenos Aires')
 asistencia = str('NO')
 
-covid_positivo_prov = covid_positivo.loc[covid_positivo.residencia_provincia_nombre==provincia]
-covid_positivo_asis = covid_positivo_prov.loc[covid_positivo_prov.asistencia_respiratoria_mecanica==asistencia]
-covid_positivo_asis = covid_positivo_asis.clasificacion_resumen.groupby(covid_positivo_asis.index).count()
-covid_positivo_asis = pd.DataFrame(covid_positivo_asis)
+positivo_prov = positivo.loc[positivo.residencia_provincia_nombre==provincia]
+positivo_asis = positivo_prov.loc[positivo_prov.asistencia_respiratoria_mecanica==asistencia]
+positivo_asis = positivo_asis.clasificacion_resumen.groupby(positivo_asis.index).count()
+positivo_asis = pd.DataFrame(positivo_asis)
 
-print(f'En {provincia} el promedio Diario de pacientes que {asistencia} necesitan Asistencia Respiratoria es: {covid_positivo_asis.mean()[0]:.4}')
+print(f'En {provincia} el promedio Diario de pacientes que {asistencia} necesitan Asistencia Respiratoria es: {positivo_asis.mean()[0]:.4}')
 
-
-######################################################################################################
 
 #Discriminación por ubicación y sexo
 provincia = str('CABA')
@@ -167,38 +181,48 @@ asistencia = str('SI')
 sexo = str('M')
 
 
-covid_positivo_prov = covid_positivo.loc[covid_positivo.residencia_provincia_nombre==provincia]
-covid_positivo_asis = covid_positivo_prov.loc[covid_positivo_prov.asistencia_respiratoria_mecanica==asistencia]
-covid_positivo_asis = covid_positivo_asis.loc[covid_positivo_asis.sexo==sexo]
-covid_positivo_asis_s = covid_positivo_asis.clasificacion_resumen.groupby(covid_positivo_asis.index).count()
-covid_positivo_asis_s = pd.DataFrame(covid_positivo_asis_s)
+positivo_prov = positivo.loc[positivo.residencia_provincia_nombre==provincia]
+positivo_asis = positivo_prov.loc[positivo_prov.asistencia_respiratoria_mecanica==asistencia]
+positivo_asis = positivo_asis.loc[positivo_asis.sexo==sexo]
+positivo_asis_s = positivo_asis.clasificacion_resumen.groupby(positivo_asis.index).count()
+positivo_asis_s = pd.DataFrame(positivo_asis_s)
 
 with plt.style.context('dark_background'):
     plt.rcParams['figure.figsize'] = [20, 6]
-    covid_positivo_asis_s.plot(kind='line',color='white')
+    positivo_asis_s.plot(kind='line',color='white')
     plt.legend('')
     plt.xlabel('')
     plt.ylabel(f'Pacientes con Asist. Resp. = :{asistencia}')
     plt.title(f'Pacientes Sexo = {sexo} | Contagios Confirmados en {provincia}')
 plt.show()
 
-#########################################################################################################
-# #### Segmentación por Grupo
 
-df['total'] = df.M + df.F
-df.loc[(df.index>=1) & (df.index <= 8),  'Grupo'] = 'Niño'
-df.loc[(df.index>=9) & (df.index <= 16),  'Grupo'] = 'Adolescente'
-df.loc[(df.index>=17) & (df.index <= 32), 'Grupo'] = 'Joven'
-df.loc[(df.index>=33) & (df.index <= 55), 'Grupo'] = 'Adulto'
-df.loc[(df.index > 56),  'Grupo'] = 'Viejo'
+#Segmentación por Grupo
+edad['total'] = edad.M + edad.F
+edad.loc[(edad.index>=1) & (edad.index <= 8),  'Grupo'] = 'Niño'
+edad.loc[(edad.index>=9) & (edad.index <= 16),  'Grupo'] = 'Adolescente'
+edad.loc[(edad.index>=17) & (edad.index <= 32), 'Grupo'] = 'Joven'
+edad.loc[(edad.index>=33) & (edad.index <= 55), 'Grupo'] = 'Adulto'
+edad.loc[(edad.index > 56),  'Grupo'] = 'Viejo'
 
-grupo = df.total.groupby(df.Grupo).sum().to_frame()
-grupo['%'] = round(grupo.total / df.total.sum() * 100, 2)
+grupo = edad.total.groupby(edad.Grupo).sum().to_frame()
+grupo['%'] = round(grupo.total / edad.total.sum() * 100, 2)
 grupo.sort_values('%',ascending=False)
+
 
 
 plt.title('Contagios en %')
 plt.pie(grupo['%'], labels=grupo.index,autopct='%1.1f%%')
 plt.show()
+
+
+string = 'Tucumán'
+x = positivo.loc[(positivo.carga_provincia_nombre==string)]
+dic = {}
+dic['f:string'] = x.clasificacion_resumen.groupby(x.index).count().cumsum()
+df = pd.DataFrame(dic)
+df.plot()
+
+
 
 
